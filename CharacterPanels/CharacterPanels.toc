@@ -1,0 +1,43 @@
+## Interface: 16001
+## Title: CharacterPanels
+## Notes: Reworks the layout of the Character, Professions, and Spellbook frames using Blizzard's original UI assets and components.
+## Author: Benbass
+## Version: 0.8
+## SavedVariables: CharacterPanelsDB
+## IconTexture: Interface\Icons\INV_Misc_Book_08
+## Category: User Interface
+
+UI\Core.lua
+UI\UI.lua
+UI\Widgets.lua
+UI\Components.lua
+UI\Layouts.lua
+UI\JournalHelpers.lua
+UI\Character.lua
+UI\Crafting.lua
+ClassData.lua
+Classes\Druid.lua
+Classes\Hunter.lua
+Classes\HunterPets.lua
+Classes\Mage.lua
+Classes\Paladin.lua
+Classes\Priest.lua
+Classes\Rogue.lua
+Classes\Shaman.lua
+Classes\Warlock.lua
+Classes\WarlockTomes.lua
+Classes\Warrior.lua
+Classes\QuestSpells.lua
+UI\SpellBookPage.lua
+UI\SpellBook.lua
+UI\Sections.lua
+UI\Professions.lua
+Tabs\Pet.lua
+Tabs\Currency.lua
+Tabs\Reputation.lua
+Tabs\Skills.lua
+Tabs\PvP.lua
+Tabs\Statistics.lua
+Tabs\Settings.lua
+
+
