@@ -65,6 +65,28 @@ local PAGE_ART_RIGHT = "spellbook-Page-Right-C60"   -- also used alone, as the m
 local PAGE_TOP_PADDING = 8     -- keeps page content off the paper's torn top edge
 local PAGE_TOP = TOOLBAR_HEIGHT + PAGE_TOP_PADDING   -- content top to writable page top
 
+-- Talents-style dividers, drawn on the top of a page. Each one has its own
+-- atlas, anchor and offsets, so each can be moved alone. Offsets are from the
+-- anchor on the page: + right, + up.
+--local DIVIDER_SCALE = 0.65
+local DIVIDERS = {
+    single    = { atlas = "Talents-divider-left-c60",  point = "TOP", scale = 0.68,      x = 14, y = 60 },
+    bookLeft  = { atlas = "Talents-divider-right-c60", point = "TOPLEFT",scale = 0.6, x = -2, y = 62 },
+    bookRight = { atlas = "Talents-divider-left-c60",  point = "TOPRIGHT",scale = 0.6,  x = 2, y = 62 },
+}
+
+local function DrawDivider(owner, spec)
+    if not owner or not spec then return end
+
+    -- A texture on the page itself, so the page's buttons and other child frames draw over it.
+    local divider = owner:CreateTexture(nil, "ARTWORK")
+    divider:SetAtlas(spec.atlas, true)
+    divider:SetScale(spec.scale or 1)
+    divider:SetPoint(spec.point, owner, spec.point, spec.x, spec.y)
+    divider:Show()
+    return divider
+end
+
 -- Classic look. The grey frame is left as the client draws it: its art
 -- reaches 5 below the frame's own bottom edge, and its background stops 2
 -- inside each edge. Everything of ours stays inside the frame; only the
@@ -138,6 +160,8 @@ local function CreateClassicWindow(name, title, width, height, x, y, openSound, 
     shade:SetPoint("TOPLEFT", BOOK_INSET, -BOOK_TOP)
     shade:SetPoint("BOTTOMRIGHT", -BOOK_INSET, BOOK_INSET)
     frame.shade = shade
+
+
 
     -- The template brings a title of its own, empty; ours is written over
     -- its place in white, and the template's is left unused.
@@ -242,7 +266,7 @@ local function FillContent(region, frame, classic, top)
     end
 end
 
-local function CreateModernPaper(parent, art)
+local function CreateModernPaper(parent, art, divider)
     local panel = CreateFrame("Frame", nil, parent)
 
     local paper = panel:CreateTexture(nil, "BACKGROUND")
@@ -253,6 +277,7 @@ local function CreateModernPaper(parent, art)
     paper:SetPoint("BOTTOMRIGHT")
     panel.paper = paper
 
+    DrawDivider(panel, divider)
     return panel
 end
 
@@ -307,6 +332,8 @@ local function CreateClassicPaper(parent)
 
     panel:SetScript("OnSizeChanged", LayoutPaper)
     panel:SetScript("OnShow", LayoutPaper)
+	
+	     --DrawDivider(panel, DIVIDER_LEFT, "TOP", "TOP", PAGE_DIVIDER_X, PAGE_DIVIDER_Y)
 
     return panel
 end
@@ -315,7 +342,7 @@ end
 local function CreatePage(frame)
     local page
     if MODERN then
-        page = CreateModernPaper(frame, PAGE_ART_RIGHT)
+        page = CreateModernPaper(frame, PAGE_ART_RIGHT, DIVIDERS.single)
     else
         page = CreateClassicPaper(frame)
     end
@@ -330,11 +357,11 @@ local function CreateBook(frame)
     FillContent(book, frame, { BOOK_INSET, -BOOK_TOP, -BOOK_INSET, BOOK_INSET }, 0)
 
     if MODERN then
-        local leftPage = CreateModernPaper(book, PAGE_ART_LEFT)
+        local leftPage = CreateModernPaper(book, PAGE_ART_LEFT, DIVIDERS.bookLeft)
         leftPage:SetPoint("TOPLEFT", 0, -PAGE_TOP)
         leftPage:SetPoint("BOTTOMRIGHT", book, "BOTTOM")
 
-        local rightPage = CreateModernPaper(book, PAGE_ART_RIGHT)
+        local rightPage = CreateModernPaper(book, PAGE_ART_RIGHT, DIVIDERS.bookRight)
         rightPage:SetPoint("TOPLEFT", book, "TOP", 0, -PAGE_TOP)
         rightPage:SetPoint("BOTTOMRIGHT")
 
@@ -376,11 +403,11 @@ local function CreateSplitBook(frame, leftWidth)
     FillContent(book, frame, { BOOK_INSET, -BOOK_TOP, -BOOK_INSET, BOOK_INSET }, 0)
 
     if MODERN then
-        local leftPage = CreateModernPaper(book, PAGE_ART_LEFT)
+                local leftPage = CreateModernPaper(book, PAGE_ART_LEFT, DIVIDERS.bookLeft)
         leftPage:SetPoint("TOPLEFT", 0, -PAGE_TOP)
         leftPage:SetPoint("BOTTOMRIGHT", book, "BOTTOMLEFT", leftWidth, 0)
 
-        local rightPage = CreateModernPaper(book, PAGE_ART_RIGHT)
+                local rightPage = CreateModernPaper(book, PAGE_ART_RIGHT, DIVIDERS.bookRight)
         rightPage:SetPoint("TOPLEFT", book, "TOPLEFT", leftWidth, -PAGE_TOP)
         rightPage:SetPoint("BOTTOMRIGHT")
 
@@ -574,17 +601,45 @@ end
 -- A window apart from the journal's sections gives its own `tabs`, a list of
 -- { key, label, icon }, and `onSelect`, called with the key of the tab
 -- clicked; it lights the right one itself with ApplyFrameTabs.
+local function OpenTalents()
+    PlayerSpellsUtil.ToggleClassTalentFrame()
+end
+
 local function CreateToolbarTabs(frame, activeKey, tabs, onSelect)
-    local sections = tabs or UI:GetTabs()
     local Select = onSelect or function(key) UI:Open(key) end
+
+
+    -- Toolbar actions: tabs that do something instead of opening a section.
+    -- They sit after the sections and are drawn by the same tab system.
+    -- The icon is the player's spec icon (not yet checked against Blizzard source).
+    local function SpecIcon()
+        local specIndex = GetSpecialization and GetSpecialization()
+        local _, _, _, icon = GetSpecializationInfo(specIndex or 1)
+        return icon or PORTRAIT_ICON
+    end
+    local actions = {
+        { key = "talents", label = "Talents", icon = 132222, onPress = OpenTalents },
+    }
+
+    local sections = {}
+    for _, info in ipairs(tabs or UI:GetTabs()) do sections[#sections + 1] = info end
+    for _, action in ipairs(actions) do sections[#sections + 1] = action end
 
     local system = CreateFrame("Frame", nil, frame, "TabSystemTemplate")
     system.minTabWidth = 1
     PlaceInToolbar(system, frame, "BOTTOMLEFT", "TOPLEFT", TOOLBAR_TAB_X, -CONTENT_MARGIN - TOOLBAR_HEIGHT + TOOLBAR_TAB_LIFT)
     system:SetTabSelectedCallback(function(tabID, isUserAction)
+        local info = sections[tabID]
+        if info.onPress then
+            if isUserAction then
+                PlayUISound(SOUND_PAGE)
+                info.onPress()
+            end
+            return false   -- an action tab does not stay selected (unconfirmed, see below)
+        end
         if isUserAction then
             PlayUISound(SOUND_PAGE)
-            Select(sections[tabID].key)
+            Select(info.key)
         end
         return true
     end)
@@ -767,6 +822,7 @@ end
 
 C.CreateExpandToggle = CreateExpandToggle
 C.SetExpandArrow = SetExpandArrow
+
 
 
 C.ShowLeftPanel = ShowLeftPanel
