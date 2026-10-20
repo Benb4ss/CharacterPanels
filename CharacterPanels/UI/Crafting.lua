@@ -221,7 +221,7 @@ local function BuildList(left, onPick)
 	listBorder:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -LIST_BORDER.right, LIST_BORDER.bottom)
 	H.FrameTopDetail(root, listBorder)
 
-	local list = { root = root, rows = {}, needle = "" }
+		local list = { root = root, rows = {}, needle = "", collapsed = {}, selectedID = nil }
 	local made = {}   -- frames from the last rebuild; hidden before the next one
 
 	local search = CreateFrame("EditBox", nil, root, "SearchBoxTemplate")
@@ -318,20 +318,48 @@ local function BuildList(left, onPick)
 			end
 
 			if #matches > 0 then
-				local header = CreateFrame("Frame", nil, content)
+
+				local collapsed = list.collapsed[category.name] == true
+
+				-- Source: ListTemplates.xml (ListHeaderVisualTemplate: arrow and header art, title
+				-- font), ListTemplates.lua (ListHeaderMixin), Blizzard_ProfessionsRecipeList.xml
+				-- (category template, lines 122-132) and .lua (category OnClick order).
+				-- GUESS: CreateFrame applies the template's mixin (ListHeaderVisualMixin). Not checked in game.
+				local header = CreateFrame("Button", nil, content, "ListHeaderVisualTemplate")
 				header:SetHeight(HEADER_H)
 				header:SetPoint("TOPLEFT", 0, y)
 				header:SetPoint("TOPRIGHT", 0, y)
+								-- The visual template has only the visual methods. ListHeaderMixin's methods
+				-- (CheckUpdateTooltip, OnEnter, OnLeave) are copied onto this frame, as Mixin does.
+				-- Blizzard's category gets them from CreateFromMixins (Blizzard_ProfessionsRecipeList.lua, line 178).
+				for key, fn in pairs(ListHeaderMixin) do
+					if header[key] == nil then header[key] = fn end
+				end
 				made[#made + 1] = header
 
-				local title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-				title:SetPoint("LEFT", 6, 0)
-				title:SetText(category.name)
-				title:SetTextColor(unpack(GOLD))
+				-- ListHeaderMixin's methods, called directly: this frame is not built from that mixin.
+				ListHeaderMixin.OnLoad(header)
+				header:SetHeaderText(category.name)
+				-- Our gold title for both states. Blizzard uses its own font colours here.
+				local gold = { GetRGB = function() return GOLD[1], GOLD[2], GOLD[3] end }
+				header:SetTitleColor(false, gold)
+				header:SetTitleColor(true, gold)
+				ListHeaderMixin.UpdateCollapsedState(header, collapsed)
+
+				header:SetScript("OnEnter", ListHeaderMixin.OnEnter)
+				header:SetScript("OnLeave", ListHeaderMixin.OnLeave)
+				-- Same order as Blizzard's category OnClick: the header's click, then the toggle.
+				-- The second argument of ListHeaderMixin.OnClick is the mouse button name.
+				header:SetScript("OnClick", function(self, button)
+					ListHeaderMixin.OnClick(self, button)
+					list.collapsed[category.name] = not collapsed
+					list.Rebuild()
+				end)
+
 				W.AddRule(header, 0, 0, -HEADER_H + 1)
 				y = y - HEADER_H - 2
 
-				for _, id in ipairs(matches) do
+				for _, id in ipairs(collapsed and {} or matches) do
 					local recipe = Data.Recipe(id) or { name = "?" }
 					local makeable = Data.MakeableCount(id)
 
@@ -347,10 +375,10 @@ local function BuildList(left, onPick)
 				-- GUESS: the 4th argument of CreateTexture (sub-level) is not confirmed by the uploaded files.
 				row.selected = row:CreateTexture(nil, "OVERLAY", nil, 2)
 				row.selected:SetAtlas("Professions_Recipe_Active", TextureKitConstants.UseAtlasSize)
-				row.selected:SetPoint("LEFT", row, "LEFT", 18, -1)
-				row.selected:SetPoint("RIGHT", row, "RIGHT", -2, -1)
+				row.selected:SetPoint("LEFT", row, "LEFT", 16, -1)
+				row.selected:SetPoint("RIGHT", row, "RIGHT", 2, -1)
 				row.selected:SetHeight(ROW_H)
-				row.selected:Hide()
+							row.selected:SetShown(row.id == list.selectedID)
 
 					-- The skill-up mark, as Blizzard's list has it: shown only when the recipe
 					-- can give skill-ups; the icon follows the difficulty, the count sits left
@@ -517,11 +545,11 @@ FitRecipeText(row, recipe, makeable)
     -- Shown only while the row is not selected (Blizzard's SetSelected).
     row.highlight = row:CreateTexture(nil, "HIGHLIGHT")
     row.highlight:SetAtlas("Professions_Recipe_Hover", TextureKitConstants.UseAtlasSize)
-    row.highlight:SetPoint("LEFT", row, "LEFT", 18, -1)
-    row.highlight:SetPoint("RIGHT", row, "RIGHT", -2, -1)
+    row.highlight:SetPoint("LEFT", row, "LEFT", 16, -1)
+    row.highlight:SetPoint("RIGHT", row, "RIGHT", 24, -1)
     row.highlight:SetHeight(ROW_H)
     row.highlight:SetAlpha(0.5)
-    row.highlight:Show()
+    			row.highlight:SetShown(row.id ~= list.selectedID)
 					
 					row:SetScript("OnClick", function() onPick(id) end)
 
@@ -863,11 +891,28 @@ local function BuildSchematic(right)
 	-- The progress bar above the book: Blizzard's rank bar, raised above the page art.
 	local rankBar = CreateFrame("Frame", nil, root, "ProfessionsRankBarTemplate")
 	rankBar:SetFrameStrata("HIGH")
-	rankBar:SetScale(0.9)
-	rankBar:SetPoint("BOTTOMRIGHT", right, "TOPRIGHT", 0, 20)
+	rankBar:SetScale(0.85)
+	rankBar:SetPoint("BOTTOMRIGHT", right, "TOPRIGHT", 0, 22)
+	
+		-- Dividers under the rank bar (pattern from Blizzard_ClassTalentsFrame.xml lines 320-327)
+			--local dividerLeft = UI.Components.CreateRankDivider(rankBar)
+			--[[
+	local dividerLeft = rankBar:CreateTexture(nil, "ARTWORK")
+	dividerLeft:SetAtlas("Talents-divider-left-c60", true)
+	dividerLeft:SetScale(0.76)
+	dividerLeft:SetPoint("TOPRIGHT", rankBar, "BOTTOMRIGHT", 4, 34)
+	]]--
+--[[
+	local dividerRight = rankBar:CreateTexture(nil, "ARTWORK")
+	dividerRight:SetAtlas("Talents-divider-right-c60", true)
+	dividerRight:SetScale(0.7)
+	dividerRight:SetPoint("TOPLEFT", rankBar, "BOTTOMLEFT", -400, 34)
+]]--
 
 	return {
 		rankBar = rankBar,
+		dividerLeft = dividerLeft,
+		dividerRight = dividerRight,
 		form = form,
 		root = root,
 		slot = slot,
@@ -1125,7 +1170,7 @@ function Crafting.Build(frame, left, right)
 
 	function view.Select(id, resetQuantity)
 		if id ~= view.selected then schematic.enchantItem = nil end
-		view.selected = id
+			view.selected = id; list.selectedID = id
 		FillSchematic(schematic, id, resetQuantity)
 		for _, row in ipairs(list.rows) do
 			    row.selected:SetShown(row.id == id)
