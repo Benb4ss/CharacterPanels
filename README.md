@@ -23,5 +23,4 @@ Reworks the layout of the Character, Professions, and Spellbook frames using Bli
 
 ![screenshot](Screenshots/Screenshot%20(11).png)
 
-![screenshot](Screenshots/Screenshot%20(12).png)
 
