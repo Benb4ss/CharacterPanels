@@ -97,3 +97,51 @@ function UI:PageWidths(name)
     end
     return layout.left, layout.width - 2 * BOOK_INSET - layout.left
 end
+
+local frames = {
+  CharacterFrame       = { 1.12, "TOPLEFT", "UIParent", "TOPLEFT", 20, -126 },
+  PlayerSpellsFrame    = { 0.86, "TOPLEFT", "UIParent", "TOPLEFT", 20, -126 },
+  ProfessionsFrame     = { 1.02,  "TOPLEFT", "UIParent", "TOPLEFT", 20, -126 },
+  LegacySystemFrame	   = { 1,  "TOPLEFT", "UIParent", "TOPLEFT", 20, -126 },
+}
+
+local function ApplyFrame(name)
+  local f = _G[name]
+  if not f then return end
+
+  local scale, point, relName, relPoint, x, y = unpack(frames[name])
+  local rel = _G[relName] or UIParent
+
+  f:SetScale(scale)
+  f:ClearAllPoints()
+  f:SetPoint(point, rel, relPoint, x / scale, y / scale)
+end
+
+local function SetupFrame(name)
+  local f = _G[name]
+  if not f or f.frameMoveResizeDone then return end
+  f.frameMoveResizeDone = true
+
+  f:HookScript("OnShow", function()
+    ApplyFrame(name)
+  end)
+
+  hooksecurefunc(f, "SetPoint", function()
+    if f:IsShown() then
+      C_Timer.After(0, function()
+        ApplyFrame(name)
+      end)
+    end
+  end)
+
+  ApplyFrame(name)
+end
+
+local ev = CreateFrame("Frame")
+ev:RegisterEvent("ADDON_LOADED")
+ev:RegisterEvent("PLAYER_LOGIN")
+ev:SetScript("OnEvent", function()
+  for name in pairs(frames) do
+    SetupFrame(name)
+  end
+end)
