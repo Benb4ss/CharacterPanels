@@ -22,7 +22,7 @@ Known Issues:
 
 ![screenshot](Screenshots/Screenshot%20(8).png)
 
-![screenshot](Screenshots/Screenshot9final.png)
+![screenshot](Screenshots/Screenshot%20(9).png)
 
 ![screenshot](Screenshots/Screenshot%20(10).png)
 
