@@ -1,6 +1,11 @@
 # CharacterPanels
 Reworks the layout of the Character, Professions, and Spellbook frames using Blizzard's original UI assets and components.
 
+Known Issues: 
+- Crafting panel not opened from action bar ability when mouseover a crafting panel.
+- Blizzard spellbook frame sometimes opens behind talent frame.
+
+
 ![screenshot](Screenshots/Screenshot%20(1).png)
 
 ![screenshot](Screenshots/Screenshot%20(2).png)
@@ -23,4 +28,4 @@ Reworks the layout of the Character, Professions, and Spellbook frames using Bli
 
 ![screenshot](Screenshots/Screenshot%20(11).png)
 
-
+![screenshot](Screenshots/Screenshot%20(12).png)
