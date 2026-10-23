@@ -1,0 +1,11 @@
+<Bindings>
+    <Binding name="JOURNAL_CHARACTER" category="Journal">
+        Journal.UI:Toggle("character")
+    </Binding>
+    <Binding name="JOURNAL_SPELLBOOK" category="Journal">
+        Journal.UI:Toggle("spellbook")
+    </Binding>
+    <Binding name="JOURNAL_PROFESSIONS" category="Journal">
+        Journal.UI:Toggle("professions")
+    </Binding>
+</Bindings>
